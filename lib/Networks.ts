@@ -1,7 +1,7 @@
 import NetworkConfigInterface from "./NetworkConfigInterface";
 
-/*  
- * Local Networks 
+/*
+ * Local Networks
 */
 export const hardhatLocal: NetworkConfigInterface = {
     chainId: 31337,
@@ -14,7 +14,7 @@ export const hardhatLocal: NetworkConfigInterface = {
 }
 
 /*
- * Ethereum 
+ * Ethereum
  */
 export const ethereumTest: NetworkConfigInterface = {
     chainId: 11155111,
@@ -95,12 +95,12 @@ export const arbitrumOne: NetworkConfigInterface = {
 /*
  * Mandala
  */
-export const mandalaPaseo: NetworkConfigInterface = {
-    chainId: 6025,
-    symbol: "KPGT",
+export const mandalaTestnet: NetworkConfigInterface = {
+    chainId: 20017,
+    symbol: " KPGBT",
     blockExplorer: {
-        name: "Mandala Paseo",
-        generatorContractUrl: (contractAddress: string) => `https://explorer.paseo.mandalachain.io/address/${contractAddress}`,
-        generateTransactionUrl: (transactionAddress: string) => `https://explorer.paseo.mandalachain.io/tx/${transactionAddress}`,
+      name: "Mandala Testnet",
+      generatorContractUrl: (contractAddress: string) => `https://explorer.baliola.dev/address/${contractAddress}`,
+      generateTransactionUrl: (transactionAddress: string) => `https://explorer.baliola.dev/tx/${transactionAddress}`,
     },
 }

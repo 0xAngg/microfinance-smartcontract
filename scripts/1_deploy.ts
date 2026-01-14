@@ -13,11 +13,15 @@ async function main() {
     CollectionConfig.domainEip712,
     CollectionConfig.versionDomain
   ]
-  const contract = await Contract.deploy(...contractArguments) as unknown as NftContractType;
 
-  await contract.deployed();
+  // Use explicit gas limit to avoid gas estimation issues on the testnet
+  const deployTx = await Contract.deploy(...contractArguments, {
+    gasLimit: 3000000,
+  }) as unknown as NftContractType;
 
-  console.log("Greeter deployed to:", contract.address);
+  await deployTx.waitForDeployment();
+
+  console.log("Greeter deployed to:", await deployTx.getAddress());
 }
 
 main().catch((error) => {

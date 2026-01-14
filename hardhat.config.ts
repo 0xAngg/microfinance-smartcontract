@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from "fs";
 import * as dotenv from "dotenv";
 import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomicfoundation/hardhat-verify";
@@ -75,7 +75,7 @@ task(
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.20',
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
@@ -92,22 +92,26 @@ const config: HardhatUserConfig = {
       chainId: 1337,
     },
     truffle: {
-      url: 'http://localhost:24012/rpc',
+      url: "http://localhost:24012/rpc",
       timeout: 60000,
       gasMultiplier: DEFAULT_GAS_MULTIPLIER,
     },
-    mandalaPaseo: {
-      url: 'https://rpc1.paseo.mandalachain.io',
-      chainId: 4818,
-      accounts: process.env.NETWORK_TESTNET_PRIVATE_KEY ? [process.env.NETWORK_TESTNET_PRIVATE_KEY] : [],
+    mandalaTestnet: {
+      url: "https://collator1.baliola.dev",
+      chainId: 20017,
+      accounts: process.env.NETWORK_TESTNET_PRIVATE_KEY
+        ? [process.env.NETWORK_TESTNET_PRIVATE_KEY]
+        : [],
+      gasPrice: 1000000000,
+      gas: 3000000,
     },
   },
   gasReporter: {
     // enabled: process.env.REPORT_GAS ? true : false,
-    enabled : true,
-    currency: 'USD',
+    enabled: true,
+    currency: "USD",
     coinmarketcap: process.env.GAS_REPORTER_COIN_MARKET_CAP_API_KEY,
-    // outputFile : 'gass-report.txt',
+    // outputFile : 'gas-report.txt',
   },
   etherscan: {
     apiKey: {
@@ -123,7 +127,7 @@ const config: HardhatUserConfig = {
       arbitrumGoerli: process.env.BLOCK_EXPLORER_API_KEY!,
       arbitrumOne: process.env.BLOCK_EXPLORER_API_KEY!,
       // Mandala Paseo Testnet
-      mandalaPaseo: process.env.BLOCK_EXPLORER_API_KEY! || "NO_API_KEY_NEEDED",
+      mandalaTestnet: process.env.BLOCK_EXPLORER_API_KEY!,
     },
     customChains: [
       {
@@ -131,16 +135,16 @@ const config: HardhatUserConfig = {
         chainId: 80002,
         urls: {
           apiURL: "https://api-amoy.polygonscan.com/api",
-          browserURL: "https://amoy.polygonscan.com/"
-        }
+          browserURL: "https://amoy.polygonscan.com/",
+        },
       },
       {
-        network: "mandalaPaseo",
-        chainId: 6025,
+        network: "mandalaTestnet",
+        chainId: 20017,
         urls: {
-          apiURL: "https://explorer.paseo.mandalachain.io/api/eth-rpc",
-          browserURL: "https://explorer.paseo.mandalachain.io"
-        }
+          apiURL: "https://explorer.baliola.dev/api",
+          browserURL: "https://explorer.baliola.dev",
+        },
       },
     ],
   },
@@ -167,11 +171,12 @@ if (process.env.NETWORK_MAINNET_URL !== undefined) {
 export default config;
 
 /**
- * Replaces all occurrences of a string in the given file. 
+ * Replaces all occurrences of a string in the given file.
  */
-function replaceInFile(file: string, search: string, replace: string): void
-{
-  const fileContent = fs.readFileSync(file, 'utf8').replace(new RegExp(search, 'g'), replace);
+function replaceInFile(file: string, search: string, replace: string): void {
+  const fileContent = fs
+    .readFileSync(file, "utf8")
+    .replace(new RegExp(search, "g"), replace);
 
-  fs.writeFileSync(file, fileContent, 'utf8');
+  fs.writeFileSync(file, fileContent, "utf8");
 }
