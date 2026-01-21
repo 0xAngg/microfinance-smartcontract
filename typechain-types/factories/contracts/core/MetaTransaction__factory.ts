@@ -11,6 +11,33 @@ import type {
 const _abi = [
   {
     inputs: [],
+    name: "ECDSAInvalidSignature",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "length",
+        type: "uint256",
+      },
+    ],
+    name: "ECDSAInvalidSignatureLength",
+    type: "error",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "s",
+        type: "bytes32",
+      },
+    ],
+    name: "ECDSAInvalidSignatureS",
+    type: "error",
+  },
+  {
+    inputs: [],
     name: "InvalidNonce",
     type: "error",
   },
@@ -33,28 +60,6 @@ const _abi = [
       },
     ],
     name: "MetaTransactionFailed",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "owner",
-        type: "address",
-      },
-    ],
-    name: "OwnableInvalidOwner",
-    type: "error",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-    ],
-    name: "OwnableUnauthorizedAccount",
     type: "error",
   },
   {
@@ -89,27 +94,14 @@ const _abi = [
         name: "functionCall",
         type: "bytes",
       },
+      {
+        indexed: false,
+        internalType: "bytes",
+        name: "signature",
+        type: "bytes",
+      },
     ],
     name: "MetaTransactionExecuted",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: "address",
-        name: "previousOwner",
-        type: "address",
-      },
-      {
-        indexed: true,
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
-    name: "OwnershipTransferred",
     type: "event",
   },
   {
@@ -159,37 +151,26 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
-        name: "",
+        name: "_from",
         type: "address",
       },
-    ],
-    name: "nonces",
-    outputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "_nonce",
         type: "uint256",
       },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "owner",
-    outputs: [
       {
-        internalType: "address",
-        name: "",
-        type: "address",
+        internalType: "bytes",
+        name: "_functionCall",
+        type: "bytes",
+      },
+      {
+        internalType: "bytes",
+        name: "_signature",
+        type: "bytes",
       },
     ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "renounceOwnership",
+    name: "executeMetaTransaction",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -198,13 +179,19 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
-        name: "newOwner",
+        name: "",
         type: "address",
       },
     ],
-    name: "transferOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
+    name: "noncesTx",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
 ] as const;

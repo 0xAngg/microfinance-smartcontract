@@ -26,8 +26,8 @@
 pragma solidity ^0.8.20;
 
 import {Delegation} from "./core/Delegation.sol";
-import {MetaTransaction, EIP712, Ownable} from "./core/MetaTransaction.sol";
-import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
+import {Ownable, Context} from "@openzeppelin/contracts/access/Ownable.sol";
+import {MetaTransaction} from "./core/MetaTransaction.sol";
 
 /**
  * @title DataSharing
@@ -35,7 +35,7 @@ import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
  *         while emitting metadata-driven events for tracking and auditing.
  * @dev Inherits from `Delegation` (which itself extends `Registration`) and `Ownable`.
  */
-contract DataSharing is Delegation, MetaTransaction {
+contract DataSharing is Delegation, MetaTransaction, Ownable {
     error AddressNotEligible();
 
     // ------------------------------------------------------------------------
@@ -61,7 +61,7 @@ contract DataSharing is Delegation, MetaTransaction {
         address _setNewPlatform,
         string memory _domain,
         string memory _version
-    ) Ownable(msg.sender) EIP712(_domain, _version) {
+    ) Ownable(msg.sender) MetaTransaction(_domain, _version) {
         setPlatform(_setNewPlatform);
     }
 
@@ -380,10 +380,10 @@ contract DataSharing is Delegation, MetaTransaction {
         bytes32 nik,
         bytes32 consumer,
         bytes32 provider,
-        string memory metadta
+        string memory metadata
     ) external onlyPlatform {
         _processAction(nik, consumer, provider);
-        emit ProcessAction(nik, consumer, provider, metadta);
+        emit ProcessAction(nik, consumer, provider, metadata);
     }
 
     /**
@@ -479,26 +479,15 @@ contract DataSharing is Delegation, MetaTransaction {
     }
 
     // ------------------------------------------------------------------------
-    //                             EIP712 Functions
+    //                             Override Function
     // ------------------------------------------------------------------------
-    /**
-     * @dev This function is used to execute a meta transaction.
-     * @param from         The sender of the meta transaction.
-     * @param nonce        The nonce associated with the meta transaction.
-     * @param functionCall The function call associated with the meta transaction.
-     * @param signature    The signature of the meta transaction.
-     *
-     * @notice This function uses the `verify` function from the `EIP712` library to verify the signature.
-     *         It is a public function that can be called by any address.
-     *         It takes in four parameters: the sender, nonce, function call, and signature.
-     *         It emits a `MetaTransactionExecuted` event.
-     */
-    function executeMetaTransaction(
-        address from,
-        uint256 nonce,
-        bytes calldata functionCall,
-        bytes calldata signature
-    ) external onlyPlatform {
-        _executeMetaTransaction(from, nonce, functionCall, signature);
+    function _msgSender()
+        internal
+        view
+        virtual
+        override(MetaTransaction, Context)
+        returns (address sender)
+    {
+        sender = MetaTransaction._msgSender();
     }
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * SPDX-License-Identifier: MIT
  *
  * @title MetaTransaction
@@ -14,9 +14,8 @@ pragma solidity ^0.8.20;
 
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-abstract contract MetaTransaction is EIP712, Ownable {
+abstract contract MetaTransaction is EIP712 {
     // ------------------------------------------------------------------------
     //                              Custom Errors
     // ------------------------------------------------------------------------
@@ -27,7 +26,7 @@ abstract contract MetaTransaction is EIP712, Ownable {
     /**
      * @dev Maps creditor codes to their Ethereum addresses.
      */
-    mapping(address => uint256) public nonces;
+    mapping(address => uint256) public noncesTx;
 
     // ------------------------------------------------------------------------
     //                              Structures
@@ -48,8 +47,18 @@ abstract contract MetaTransaction is EIP712, Ownable {
      * @notice Emitted when a new platform address is change or set.
      * @param user          Wallet user execute transaction.
      * @param functionCall  The function call to be executed.
+     * @param signature    The signature of the meta transaction.
      */
-    event MetaTransactionExecuted(address user, bytes functionCall);
+    event MetaTransactionExecuted(
+        address user,
+        bytes functionCall,
+        bytes signature
+    );
+
+    constructor(
+        string memory _name,
+        string memory _version
+    ) EIP712(_name, _version) {}
 
     // ------------------------------------------------------------------------
     //                               Functions
@@ -103,14 +112,14 @@ abstract contract MetaTransaction is EIP712, Ownable {
      *         It takes in four parameters: the sender, nonce, function call, and signature.
      *         It emits a `MetaTransactionExecuted` event.
      */
-    function _executeMetaTransaction(
+    function executeMetaTransaction(
         address _from,
         uint256 _nonce,
         bytes calldata _functionCall,
         bytes calldata _signature
-    ) internal {
+    ) external {
         // Fetch once to reduce storage cost
-        uint256 currentNonce = nonces[_from];
+        uint256 currentNonce = noncesTx[_from];
 
         if (_nonce != currentNonce) {
             revert InvalidNonce();
@@ -121,11 +130,11 @@ abstract contract MetaTransaction is EIP712, Ownable {
         }
 
         // Increment nonce before execution to prevent replays
-        nonces[_from] = currentNonce + 1;
+        noncesTx[_from] = currentNonce + 1;
 
         // Execute the function call & handle errors efficiently
         (bool success, bytes memory returnData) = address(this).call(
-            abi.encodePacked(_functionCall, _from) // Append `_from`
+            _functionCall
         );
 
         if (!success) {
@@ -134,7 +143,7 @@ abstract contract MetaTransaction is EIP712, Ownable {
             revert MetaTransactionFailed(errorMessage);
         }
 
-        emit MetaTransactionExecuted(_from, _functionCall);
+        emit MetaTransactionExecuted(_from, _functionCall, _signature);
     }
 
     // Optimized function to extract revert reason
@@ -160,16 +169,15 @@ abstract contract MetaTransaction is EIP712, Ownable {
      * @notice This function is a public function that can be called by any address.
      *         It returns the sender of the meta transaction.
      */
-    function _msgSender() internal view override returns (address) {
+    function _msgSender() internal view virtual returns (address) {
         if (msg.sender == address(this)) {
-            bytes memory array = msg.data;
-            uint256 index = msg.data.length;
+            // Ensure calldata is long enough
+            require(msg.data.length >= 20, "Invalid calldata");
+
             address userAddress;
             assembly {
-                userAddress := and(
-                    mload(add(array, index)),
-                    0xffffffffffffffffffffffffffffffffffffffff
-                )
+                // Safe extraction from msg.data
+                userAddress := shr(96, calldataload(sub(calldatasize(), 20)))
             }
             return userAddress;
         } else {
