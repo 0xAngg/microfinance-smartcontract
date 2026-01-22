@@ -605,7 +605,12 @@ export interface DataSharing extends BaseContract {
   owner: TypedContractMethod<[], [string], "view">;
 
   processAction: TypedContractMethod<
-    [nik: BytesLike, consumer: BytesLike, provider: BytesLike, metadta: string],
+    [
+      nik: BytesLike,
+      consumer: BytesLike,
+      provider: BytesLike,
+      metadata: string
+    ],
     [void],
     "nonpayable"
   >;
@@ -768,7 +773,12 @@ export interface DataSharing extends BaseContract {
   getFunction(
     nameOrSignature: "processAction"
   ): TypedContractMethod<
-    [nik: BytesLike, consumer: BytesLike, provider: BytesLike, metadta: string],
+    [
+      nik: BytesLike,
+      consumer: BytesLike,
+      provider: BytesLike,
+      metadata: string
+    ],
     [void],
     "nonpayable"
   >;

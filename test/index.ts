@@ -8,6 +8,7 @@ import {
   toBeHex,
   verifyTypedData,
   TypedDataDomain,
+  ContractTransactionReceipt,
 } from "ethers";
 import CollectionConfig from "../config/CollectionConfig";
 import { NftContractType } from "../lib/NftContractProvider";
@@ -36,6 +37,23 @@ describe(CollectionConfig.contractName, async function () {
 
   function hash32(identifier: string): string {
     return keccak256(toUtf8Bytes(identifier));
+  }
+
+  // Helper function to find and parse event from receipt (ethers v6)
+  function findEvent(receipt: ContractTransactionReceipt, eventName: string) {
+    const eventFragment = contract.interface.getEvent(eventName as any);
+    if (!eventFragment) return null;
+
+    const eventLog = receipt.logs.find(
+      (log: any) => log.topics[0] === eventFragment.topicHash
+    );
+
+    if (!eventLog) return null;
+
+    return contract.interface.parseLog({
+      topics: eventLog.topics as string[],
+      data: eventLog.data,
+    });
   }
 
   before(async function () {
@@ -196,7 +214,7 @@ describe(CollectionConfig.contractName, async function () {
     };
 
     // ✅ Fetch correct nonce
-    const nonce = await contract.nonces(await platform.getAddress());
+    const nonce = await contract.noncesTx(await platform.getAddress());
 
     // ✅ Encode function call correctly
     const functionCall = contract.interface.encodeFunctionData(
@@ -212,15 +230,20 @@ describe(CollectionConfig.contractName, async function () {
       ]
     );
 
-    // ✅ Prepare message for signing
+    // ✅ Append platform address to functionCall for _msgSender() to extract
+    // The contract's _msgSender() extracts the last 20 bytes from calldata
+    const platformAddress = await platform.getAddress();
+    const functionCallWithSender = functionCall + platformAddress.slice(2); // Remove '0x' from address
+
+    // ✅ Prepare message for signing (use functionCallWithSender!)
     const message = {
       from: await platform.getAddress(),
       nonce: Number(nonce),
-      functionCall: functionCall,
+      functionCall: functionCallWithSender, // Sign with appended address
     };
 
-    // ✅ Sign meta-transaction
-    const signature = await platform._signTypedData(
+    // ✅ Sign meta-transaction (ethers v6 uses signTypedData)
+    const signature = await platform.signTypedData(
       domain,
       {
         MetaTransaction: [
@@ -254,7 +277,7 @@ describe(CollectionConfig.contractName, async function () {
       .executeMetaTransaction(
         message.from,
         message.nonce,
-        message.functionCall,
+        message.functionCall, // Use functionCall with appended address
         signature
       );
     const receipt = await tx.wait();
@@ -262,18 +285,15 @@ describe(CollectionConfig.contractName, async function () {
       throw new Error("Transaction reverted");
     }
 
-    // ✅ Check for event emission
-    const event = (receipt as any).events?.find(
-      (e: { event: string }) => e.event === "CreditorAddedWithMetadata"
-    );
-
-    expect(event).to.not.be.undefined;
-    expect(event.args.creditorCode).to.equal(creditorCode);
-    expect(event.args.institutionCode).to.equal(institutionCode);
-    expect(event.args.institutionName).to.equal(institutionName);
-    expect(event.args.approvalDate).to.equal(approvalDate);
-    expect(event.args.signerName).to.equal(signerName);
-    expect(event.args.signerPosition).to.equal(signerPosition);
+    // ✅ Check for event emission using helper function
+    const parsedEvent = findEvent(receipt, "CreditorAddedWithMetadata");
+    expect(parsedEvent).to.not.be.null;
+    expect(parsedEvent?.args.creditorCode).to.equal(creditorCode);
+    expect(parsedEvent?.args.institutionCode).to.equal(institutionCode);
+    expect(parsedEvent?.args.institutionName).to.equal(institutionName);
+    expect(parsedEvent?.args.approvalDate).to.equal(approvalDate);
+    expect(parsedEvent?.args.signerName).to.equal(signerName);
+    expect(parsedEvent?.args.signerPosition).to.equal(signerPosition);
   });
 
   it("Success retrieve public key creditor A from code creditor A", async function () {
@@ -393,19 +413,18 @@ describe(CollectionConfig.contractName, async function () {
     if (!receipt) {
       throw new Error("Receipt not found");
     }
-    const event = (receipt as any).events?.find(
-      (e: { event: string }) => e.event === "DebtorAddedWithMetadata"
-    );
 
-    expect(event).to.not.be.undefined;
-    expect(event.args.nik).to.equal(nikDebtor);
-    expect(event.args.name).to.equal(name);
-    expect(event.args.creditorCode).to.equal(creditorCode);
-    expect(event.args.creditorName).to.equal(creditorName);
-    expect(event.args.applicationDate).to.equal(applicationDate);
-    expect(event.args.approvalDate).to.equal(approvalDate);
-    expect(event.args.urlKTP).to.equal(urlKTP);
-    expect(event.args.urlApproval).to.equal(urlApproval);
+    // ✅ Use helper function to parse event (ethers v6)
+    const parsedEvent = findEvent(receipt, "DebtorAddedWithMetadata");
+    expect(parsedEvent).to.not.be.null;
+    expect(parsedEvent?.args.nik).to.equal(nikDebtor);
+    expect(parsedEvent?.args.name).to.equal(name);
+    expect(parsedEvent?.args.creditorCode).to.equal(creditorCode);
+    expect(parsedEvent?.args.creditorName).to.equal(creditorName);
+    expect(parsedEvent?.args.applicationDate).to.equal(applicationDate);
+    expect(parsedEvent?.args.approvalDate).to.equal(approvalDate);
+    expect(parsedEvent?.args.urlKTP).to.equal(urlKTP);
+    expect(parsedEvent?.args.urlApproval).to.equal(urlApproval);
   });
 
   it("Error adding Debtor to active customer for creditor A cause already registered", async function () {
@@ -431,7 +450,7 @@ describe(CollectionConfig.contractName, async function () {
     );
 
     expect(creditors).to.deep.equal([await bankA.getAddress()]);
-    expect(statuses).to.deep.equal([1]);
+    expect(statuses.map((s: bigint) => Number(s))).to.deep.equal([1]); // Convert BigInt to Number
   });
 
   it("Success adding creditor B and retrieve event emit", async function () {
@@ -459,16 +478,16 @@ describe(CollectionConfig.contractName, async function () {
     if (!receipt) {
       throw new Error("Receipt not found");
     }
-    const event = (receipt as any).events?.find(
-      (e: { event: string }) => e.event === "CreditorAddedWithMetadata"
-    );
-    expect(event).to.not.be.undefined;
-    expect(event.args.creditorCode).to.equal(creditorCode);
-    expect(event.args.institutionCode).to.equal(institutionCode);
-    expect(event.args.institutionName).to.equal(institutionName);
-    expect(event.args.approvalDate).to.equal(approvalDate);
-    expect(event.args.signerName).to.equal(signerName);
-    expect(event.args.signerPosition).to.equal(signerPosition);
+
+    // ✅ Use helper function to parse event (ethers v6)
+    const parsedEvent = findEvent(receipt, "CreditorAddedWithMetadata");
+    expect(parsedEvent).to.not.be.null;
+    expect(parsedEvent?.args.creditorCode).to.equal(creditorCode);
+    expect(parsedEvent?.args.institutionCode).to.equal(institutionCode);
+    expect(parsedEvent?.args.institutionName).to.equal(institutionName);
+    expect(parsedEvent?.args.approvalDate).to.equal(approvalDate);
+    expect(parsedEvent?.args.signerName).to.equal(signerName);
+    expect(parsedEvent?.args.signerPosition).to.equal(signerPosition);
 
     const creditorAddressC = await bankC.getAddress();
     const creditorCodeC = hash32(codeBankC);
@@ -720,7 +739,7 @@ describe(CollectionConfig.contractName, async function () {
     );
 
     expect(creditors).to.deep.equal([await bankA.getAddress()]); // bank a and bank b
-    expect(statuses).to.deep.equal([1]); // approve and none
+    expect(statuses.map((s: bigint) => Number(s))).to.deep.equal([1]); // Convert BigInt to Number
   });
 
   // it("Should Error When provider approve delegate for data sharing from consumer but the wallet runner is not same as provider", async function () {
@@ -753,12 +772,11 @@ describe(CollectionConfig.contractName, async function () {
     };
 
     // ✅ Fetch correct nonce
-    const nonce = await contract.nonces(await platform.getAddress());
+    const nonce = await contract.noncesTx(await platform.getAddress());
 
     // ✅ Encode function call correctly
     const functionCall = contract.interface.encodeFunctionData(
       "delegate(bytes32,bytes32,bytes32,string,string,string,string)",
-
       [
         nikDebtor,
         creditorConsumerCode,
@@ -770,15 +788,19 @@ describe(CollectionConfig.contractName, async function () {
       ]
     );
 
-    // ✅ Prepare message for signing
+    // ✅ Append platform address to functionCall for _msgSender() to extract
+    const platformAddress = await platform.getAddress();
+    const functionCallWithSender = functionCall + platformAddress.slice(2);
+
+    // ✅ Prepare message for signing (use functionCallWithSender!)
     const message = {
-      from: await platform.getAddress(),
+      from: platformAddress,
       nonce: Number(nonce),
-      functionCall: functionCall,
+      functionCall: functionCallWithSender,
     };
 
-    // ✅ Sign meta-transaction
-    const signature = await platform._signTypedData(
+    // ✅ Sign meta-transaction (ethers v6 uses signTypedData)
+    const signature = await platform.signTypedData(
       domain,
       {
         MetaTransaction: [
@@ -804,7 +826,7 @@ describe(CollectionConfig.contractName, async function () {
       signature
     );
 
-    expect(recoveredSigner).to.equal(await platform.getAddress());
+    expect(recoveredSigner).to.equal(platformAddress);
 
     // ✅ Execute meta-transaction
     const tx = await contract
@@ -819,17 +841,17 @@ describe(CollectionConfig.contractName, async function () {
     if (!receipt) {
       throw new Error("Transaction failed");
     }
-    const event = (receipt as any).events?.find(
-      (e: { event: string }) => e.event === "DelegationMetadata"
-    );
-    expect(event).to.not.be.undefined;
-    expect(event.args.nik).to.equal(nikDebtor);
-    expect(event.args.requestId).to.equal(requestId);
-    expect(event.args.creditorConsumerCode).to.equal(creditorConsumerCode);
-    expect(event.args.creditorProviderCode).to.equal(creditorProviderCode);
-    expect(event.args.transactionId).to.equal(transactionId);
-    expect(event.args.referenceId).to.equal(referenceId);
-    expect(event.args.requestDate).to.equal(requestDate);
+
+    // ✅ Use helper function to parse event (ethers v6)
+    const parsedEvent = findEvent(receipt, "DelegationMetadata");
+    expect(parsedEvent).to.not.be.null;
+    expect(parsedEvent?.args.nik).to.equal(nikDebtor);
+    expect(parsedEvent?.args.requestId).to.equal(requestId);
+    expect(parsedEvent?.args.creditorConsumerCode).to.equal(creditorConsumerCode);
+    expect(parsedEvent?.args.creditorProviderCode).to.equal(creditorProviderCode);
+    expect(parsedEvent?.args.transactionId).to.equal(transactionId);
+    expect(parsedEvent?.args.referenceId).to.equal(referenceId);
+    expect(parsedEvent?.args.requestDate).to.equal(requestDate);
 
     // const tx = await contract
     //   .connect(platform)
@@ -845,7 +867,6 @@ describe(CollectionConfig.contractName, async function () {
     // expect(event.args.creditorProviderCode).to.equal(hash32(codeBankA));
     // expect(event.args.status).to.equal(2);
   });
-
   it("Should error approving delegation twice", async function () {
     await expect(
       contract

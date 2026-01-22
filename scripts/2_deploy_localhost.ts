@@ -4,12 +4,17 @@ import { NftContractType } from "../lib/NftContractProvider";
 import ContractArguments from "../config/ContractArguments";
 
 async function main() {
-
   console.log("Deploying contract..");
 
   // We get the contract to deploy
-  const Contract = await ethers.getContractFactory(CollectionConfig.contractName);
-  const contract = await Contract.deploy(...ContractArguments) as unknown as NftContractType;
+  const Contract = await ethers.getContractFactory(
+    CollectionConfig.contractName
+  );
+  const contract = (await Contract.deploy(
+    CollectionConfig.platformAddressForLocalHost,
+    CollectionConfig.domainEip712,
+    CollectionConfig.versionDomain
+  )) as unknown as NftContractType;
 
   await contract.waitForDeployment();
 
