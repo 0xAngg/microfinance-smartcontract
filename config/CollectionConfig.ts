@@ -5,7 +5,7 @@ const CollectionConfig: CollectionConfigInterface = {
     testnet: Networks.mandalaTestnet,
     mainnet: Networks.arbitrumOne,
     contractName: "DataSharing",
-    platformAddress: "0xdDf7d12Ec6eEDa6B3350eFeD3e9DC432412ecDf5", // account test
+    platformAddress: "0x064A554B4E2944c72dfc5edA311fB364a3DB39d9", // account test
     platformAddressForLocalHost: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     domainEip712: "DataSharing",
     versionDomain: "1",

@@ -14,7 +14,7 @@
     "test-extended": "EXTENDED_TESTS=1 hardhat test",
     "test-gas": "REPORT_GAS=1 hardhat test",
     "local-node": "hardhat node",
-    "deploy": "hardhat run scripts/1_deploy.ts",
+    "deploy-contract": "hardhat run scripts/1_deploy.ts",
     "deploy-localhost": "hardhat run scripts/2_deploy_localhost.ts --network localhost",
     "deploy-token": "hardhat run scripts/5_deploy_test_token_native.ts",
     "verify": "hardhat verify --constructor-args config/ContractArguments.ts",
